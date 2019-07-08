@@ -1,0 +1,85 @@
+﻿
+@{
+    ViewBag.Title = "Chat";
+}
+
+
+
+<h2>Chat</h2>
+
+
+<div class="container">
+    <input type="text" id="message" />
+    <input type="button" id="sendmessage" value="Send" />
+    <input type="hidden" id="displayname" />
+    <ul id="discussion">
+    </ul>
+</div>
+
+<div id="box" style="background-color:black;height:100px;width:100px;position:absolute;left:10px;top:10px;">
+
+</div>
+
+@section scripts {
+
+    <script src="~/Scripts/jquery.signalR-2.2.2.min.js"></script>
+    <script src="~/signalr/hubs"></script>
+
+    <script>
+
+        $(function () {
+            let box = $("#box");
+            shapeModel = {
+                left: 0,
+                top: 0
+            };
+            var chat = $.connection.myHub;
+            chat.client.addNewMessageToPage = function (name, message) {
+                $('#discussion').append('<li><strong>' + htmlEncode(name)
+                    + '</strong>: ' + htmlEncode(message) + '</li>');
+            };
+            $('#displayname').val(prompt('Enter your name:', ''));
+            $('#message').focus();
+
+
+            chat.client.updateShape = function (model) {
+                console.log(model);
+                shapeModel = model;
+                box.css({ left: model.left, top: model.top });
+            };
+            chat.client.broadcastMessage = function () {
+                console.log(arguments);
+            }
+
+
+            $.connection.hub.start().done(function () {
+
+
+
+                $('#sendmessage').click(function () {
+                    chat.server.send($('#displayname').val(), $('#message').val());
+                    // Clear text box and reset focus for next comment.
+                    $('#message').val('').focus();
+                });
+
+
+
+                document.onmousemove = function (ev) {
+                    let e = ev || window.event;
+                    box.css({ left: e.clientX + 50, top: e.clientY + 50 });
+                    shapeModel = box.offset();
+                    chat.server.updateModel(shapeModel);
+                }
+
+
+
+
+            });
+        });
+        // This optional function html-encodes messages for display in the page.
+        function htmlEncode(value) {
+            var encodedValue = $('<div />').text(value).html();
+            return encodedValue;
+        }
+    </script>
+}
